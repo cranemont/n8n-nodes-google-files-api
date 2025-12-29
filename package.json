@@ -13,12 +13,12 @@
   "license": "MIT",
   "homepage": "",
   "author": {
-    "name": "Author",
-    "email": ""
+    "name": "cranemont",
+    "email": "cranemont@gmail.com"
   },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "cranemont/n8n-nodes-google-files-api"
   },
   "engines": {
     "node": ">=18.17.0"
