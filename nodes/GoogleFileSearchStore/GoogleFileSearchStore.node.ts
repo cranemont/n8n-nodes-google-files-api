@@ -65,6 +65,30 @@ export class GoogleFileSearchStore implements INodeType {
 						description: 'Store에 문서를 업로드하고 인덱싱합니다',
 					},
 					{
+						name: 'Import File',
+						value: 'importFile',
+						action: 'Import file from Files API to store',
+						description: '기존 Files API 파일을 Store에 가져옵니다',
+					},
+					{
+						name: 'List Documents',
+						value: 'listDocuments',
+						action: 'List documents in store',
+						description: 'Store 내 문서 목록을 조회합니다',
+					},
+					{
+						name: 'Get Document',
+						value: 'getDocument',
+						action: 'Get document details',
+						description: '특정 문서의 상세 정보를 조회합니다',
+					},
+					{
+						name: 'Delete Document',
+						value: 'deleteDocument',
+						action: 'Delete document from store',
+						description: 'Store에서 특정 문서를 삭제합니다',
+					},
+					{
 						name: 'Query Documents',
 						value: 'queryDocuments',
 						action: 'Query documents in store',
@@ -102,10 +126,24 @@ export class GoogleFileSearchStore implements INodeType {
 				default: '',
 				displayOptions: {
 					show: {
-						operation: ['getStore', 'deleteStore', 'uploadDocument', 'queryDocuments'],
+						operation: ['getStore', 'deleteStore', 'uploadDocument', 'importFile', 'listDocuments', 'queryDocuments'],
 					},
 				},
 				description: 'File Search Store 이름 (예: fileSearchStores/abc123)',
+			},
+			// Document Name 파라미터 (Get Document, Delete Document용)
+			{
+				displayName: 'Document Name',
+				name: 'documentName',
+				type: 'string',
+				required: true,
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['getDocument', 'deleteDocument'],
+					},
+				},
+				description: '문서 리소스 이름 (예: fileSearchStores/abc123/documents/doc456)',
 			},
 			// List Stores 파라미터
 			{
@@ -136,6 +174,48 @@ export class GoogleFileSearchStore implements INodeType {
 				},
 				description: '다음 페이지를 가져오기 위한 토큰',
 			},
+			// List Documents 파라미터
+			{
+				displayName: 'Page Size',
+				name: 'documentPageSize',
+				type: 'number',
+				typeOptions: {
+					minValue: 1,
+					maxValue: 20,
+				},
+				default: 10,
+				displayOptions: {
+					show: {
+						operation: ['listDocuments'],
+					},
+				},
+				description: '한 페이지에 가져올 문서 수 (최대 20)',
+			},
+			{
+				displayName: 'Page Token',
+				name: 'documentPageToken',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['listDocuments'],
+					},
+				},
+				description: '다음 페이지를 가져오기 위한 토큰',
+			},
+			// Delete Document 옵션
+			{
+				displayName: 'Force Delete',
+				name: 'forceDelete',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: {
+						operation: ['deleteDocument'],
+					},
+				},
+				description: 'true인 경우 연관된 Chunks도 함께 삭제합니다. false인 경우 Chunks가 존재하면 에러를 반환합니다.',
+			},
 			// Upload Document 파라미터
 			{
 				displayName: 'Binary Property',
@@ -162,6 +242,21 @@ export class GoogleFileSearchStore implements INodeType {
 				},
 				description: '문서의 표시 이름 (비어있으면 파일명 사용)',
 			},
+			// Import File 파라미터
+			{
+				displayName: 'File Name',
+				name: 'fileName',
+				type: 'string',
+				required: true,
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['importFile'],
+					},
+				},
+				description: 'Files API에 업로드된 파일 이름 (예: files/abc123)',
+			},
+			// Chunking Options (Upload Document, Import File 공통)
 			{
 				displayName: 'Chunking Options',
 				name: 'chunkingOptions',
@@ -170,7 +265,7 @@ export class GoogleFileSearchStore implements INodeType {
 				default: {},
 				displayOptions: {
 					show: {
-						operation: ['uploadDocument'],
+						operation: ['uploadDocument', 'importFile'],
 					},
 				},
 				options: [
@@ -198,6 +293,7 @@ export class GoogleFileSearchStore implements INodeType {
 					},
 				],
 			},
+			// Custom Metadata (Upload Document, Import File 공통)
 			{
 				displayName: 'Custom Metadata',
 				name: 'customMetadata',
@@ -208,7 +304,7 @@ export class GoogleFileSearchStore implements INodeType {
 				default: {},
 				displayOptions: {
 					show: {
-						operation: ['uploadDocument'],
+						operation: ['uploadDocument', 'importFile'],
 					},
 				},
 				description: '문서에 추가할 메타데이터',
@@ -268,13 +364,13 @@ export class GoogleFileSearchStore implements INodeType {
 				name: 'model',
 				type: 'options',
 				options: [
-					{ name: 'Gemini 2.0 Flash', value: 'gemini-2.0-flash' },
-					{ name: 'Gemini 2.0 Flash-Lite', value: 'gemini-2.0-flash-lite' },
 					{ name: 'Gemini 2.5 Flash', value: 'gemini-2.5-flash' },
 					{ name: 'Gemini 2.5 Flash-Lite', value: 'gemini-2.5-flash-lite' },
 					{ name: 'Gemini 2.5 Pro', value: 'gemini-2.5-pro' },
+					{ name: 'Gemini 3 Pro Preview', value: 'gemini-3-pro-preview' },
+					{ name: 'Gemini 3 Flash Preview', value: 'gemini-3-flash-preview' },
 				],
-				default: 'gemini-2.0-flash',
+				default: 'gemini-2.5-flash',
 				displayOptions: {
 					show: {
 						operation: ['queryDocuments'],
@@ -367,6 +463,43 @@ export class GoogleFileSearchStore implements INodeType {
 			}
 
 			return new NodeOperationError(this.getNode(), apiMessage);
+		};
+
+		// Helper function to build custom metadata array for API
+		const buildCustomMetadataArray = (customMetadata: IDataObject): Array<{ key: string; stringValue?: string; numericValue?: number }> => {
+			const metadataArray: Array<{ key: string; stringValue?: string; numericValue?: number }> = [];
+			if (customMetadata.metadataValues) {
+				const metadataEntries = customMetadata.metadataValues as Array<{
+					key: string;
+					valueType: string;
+					value: string;
+				}>;
+				for (const entry of metadataEntries) {
+					if (entry.key) {
+						if (entry.valueType === 'numeric') {
+							metadataArray.push({ key: entry.key, numericValue: parseFloat(entry.value) });
+						} else {
+							metadataArray.push({ key: entry.key, stringValue: entry.value });
+						}
+					}
+				}
+			}
+			return metadataArray;
+		};
+
+		// Helper function to build chunking config (snake_case for REST API)
+		const buildChunkingConfigSnakeCase = (chunkingOptions: IDataObject): IDataObject | null => {
+			const white_space_config: IDataObject = {};
+			if (chunkingOptions.maxTokensPerChunk) {
+				white_space_config.max_tokens_per_chunk = chunkingOptions.maxTokensPerChunk;
+			}
+			if (chunkingOptions.maxOverlapTokens) {
+				white_space_config.max_overlap_tokens = chunkingOptions.maxOverlapTokens;
+			}
+			if (Object.keys(white_space_config).length > 0) {
+				return { white_space_config };
+			}
+			return null;
 		};
 
 		for (let i = 0; i < items.length; i++) {
@@ -476,7 +609,7 @@ export class GoogleFileSearchStore implements INodeType {
 					const mimeType = binaryData.mimeType || 'application/octet-stream';
 					const fileName = documentDisplayName || binaryData.fileName || 'unnamed_document';
 
-					// Build metadata
+					// Build metadata for multipart upload
 					const metadata: IDataObject = {};
 					if (customMetadata.metadataValues) {
 						const metadataEntries = customMetadata.metadataValues as Array<{
@@ -495,25 +628,30 @@ export class GoogleFileSearchStore implements INodeType {
 						}
 					}
 
-					// Build chunking config
-					const chunkingConfig: IDataObject = {};
-					if (chunkingOptions.maxTokensPerChunk) {
-						chunkingConfig.maxTokensPerChunk = chunkingOptions.maxTokensPerChunk;
-					}
-					if (chunkingOptions.maxOverlapTokens) {
-						chunkingConfig.maxOverlapTokens = chunkingOptions.maxOverlapTokens;
-					}
+					// Build chunking config (snake_case for REST API multipart upload)
+					const chunkingConfigSnake = buildChunkingConfigSnakeCase(chunkingOptions);
 
 					const boundary = '---n8n-boundary-' + Date.now().toString(16);
 
+					// Build upload config with snake_case for REST API
 					const uploadConfig: IDataObject = {
-						displayName: fileName,
+						display_name: fileName,
 					};
 					if (Object.keys(metadata).length > 0) {
-						uploadConfig.customMetadata = metadata;
+						// Convert metadata to snake_case format
+						const customMetadataSnake: IDataObject = {};
+						for (const [key, value] of Object.entries(metadata)) {
+							const metaValue = value as { stringValue?: string; numericValue?: number };
+							if (metaValue.stringValue !== undefined) {
+								customMetadataSnake[key] = { string_value: metaValue.stringValue };
+							} else if (metaValue.numericValue !== undefined) {
+								customMetadataSnake[key] = { numeric_value: metaValue.numericValue };
+							}
+						}
+						uploadConfig.custom_metadata = customMetadataSnake;
 					}
-					if (Object.keys(chunkingConfig).length > 0) {
-						uploadConfig.chunkingConfig = chunkingConfig;
+					if (chunkingConfigSnake) {
+						uploadConfig.chunking_config = chunkingConfigSnake;
 					}
 
 					const metadataPart = JSON.stringify(uploadConfig);
@@ -545,6 +683,122 @@ export class GoogleFileSearchStore implements INodeType {
 						});
 
 						responseData = typeof response === 'string' ? JSON.parse(response) : response;
+					} catch (error) {
+						throw handleApiError(error);
+					}
+				} else if (operation === 'importFile') {
+					// Import File operation - Import existing Files API file to Store
+					const storeName = this.getNodeParameter('storeName', i) as string;
+					const fileName = this.getNodeParameter('fileName', i) as string;
+					const chunkingOptions = this.getNodeParameter('chunkingOptions', i) as IDataObject;
+					const customMetadata = this.getNodeParameter('customMetadata', i) as IDataObject;
+
+					const normalizedStoreName = storeName.startsWith('fileSearchStores/')
+						? storeName
+						: `fileSearchStores/${storeName}`;
+
+					const normalizedFileName = fileName.startsWith('files/')
+						? fileName
+						: `files/${fileName}`;
+
+					// Build request body
+					const requestBody: IDataObject = {
+						file_name: normalizedFileName,
+					};
+
+					// Add custom metadata if provided
+					const metadataArray = buildCustomMetadataArray(customMetadata);
+					if (metadataArray.length > 0) {
+						requestBody.custom_metadata = metadataArray;
+					}
+
+					// Add chunking config if provided (snake_case for REST API)
+					const chunkingConfigSnake = buildChunkingConfigSnakeCase(chunkingOptions);
+					if (chunkingConfigSnake) {
+						requestBody.chunking_config = chunkingConfigSnake;
+					}
+
+					try {
+						responseData = await this.helpers.httpRequest({
+							method: 'POST',
+							url: `${baseUrl}/v1beta/${normalizedStoreName}:importFile`,
+							qs: { key: apiKey },
+							headers: {
+								'Content-Type': 'application/json',
+							},
+							body: requestBody,
+							json: true,
+						}) as IDataObject;
+					} catch (error) {
+						throw handleApiError(error);
+					}
+				} else if (operation === 'listDocuments') {
+					// List Documents operation
+					const storeName = this.getNodeParameter('storeName', i) as string;
+					const pageSize = this.getNodeParameter('documentPageSize', i) as number;
+					const pageToken = this.getNodeParameter('documentPageToken', i) as string;
+
+					const normalizedStoreName = storeName.startsWith('fileSearchStores/')
+						? storeName
+						: `fileSearchStores/${storeName}`;
+
+					const qs: IDataObject = {
+						key: apiKey,
+						pageSize,
+					};
+					if (pageToken) {
+						qs.pageToken = pageToken;
+					}
+
+					try {
+						responseData = await this.helpers.httpRequest({
+							method: 'GET',
+							url: `${baseUrl}/v1beta/${normalizedStoreName}/documents`,
+							qs,
+							json: true,
+						}) as IDataObject;
+					} catch (error) {
+						throw handleApiError(error);
+					}
+				} else if (operation === 'getDocument') {
+					// Get Document operation
+					const documentName = this.getNodeParameter('documentName', i) as string;
+					const normalizedDocumentName = documentName.startsWith('fileSearchStores/')
+						? documentName
+						: `fileSearchStores/${documentName}`;
+
+					try {
+						responseData = await this.helpers.httpRequest({
+							method: 'GET',
+							url: `${baseUrl}/v1beta/${normalizedDocumentName}`,
+							qs: { key: apiKey },
+							json: true,
+						}) as IDataObject;
+					} catch (error) {
+						throw handleApiError(error);
+					}
+				} else if (operation === 'deleteDocument') {
+					// Delete Document operation
+					const documentName = this.getNodeParameter('documentName', i) as string;
+					const forceDelete = this.getNodeParameter('forceDelete', i) as boolean;
+
+					const normalizedDocumentName = documentName.startsWith('fileSearchStores/')
+						? documentName
+						: `fileSearchStores/${documentName}`;
+
+					const qs: IDataObject = { key: apiKey };
+					if (forceDelete) {
+						qs.force = true;
+					}
+
+					try {
+						await this.helpers.httpRequest({
+							method: 'DELETE',
+							url: `${baseUrl}/v1beta/${normalizedDocumentName}`,
+							qs,
+							json: true,
+						});
+						responseData = { success: true, deletedDocument: normalizedDocumentName };
 					} catch (error) {
 						throw handleApiError(error);
 					}
