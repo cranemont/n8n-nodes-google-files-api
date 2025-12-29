@@ -114,15 +114,15 @@ export class GoogleFileSearchStore implements INodeType {
 				type: 'number',
 				typeOptions: {
 					minValue: 1,
-					maxValue: 100,
+					maxValue: 20,
 				},
-				default: 100,
+				default: 20,
 				displayOptions: {
 					show: {
 						operation: ['listStores'],
 					},
 				},
-				description: '한 페이지에 가져올 Store 수',
+				description: '한 페이지에 가져올 Store 수 (최대 20)',
 			},
 			{
 				displayName: 'Page Token',
@@ -264,6 +264,25 @@ export class GoogleFileSearchStore implements INodeType {
 				description: '검색할 질문 또는 쿼리',
 			},
 			{
+				displayName: 'Model',
+				name: 'model',
+				type: 'options',
+				options: [
+					{ name: 'Gemini 2.0 Flash', value: 'gemini-2.0-flash' },
+					{ name: 'Gemini 2.0 Flash-Lite', value: 'gemini-2.0-flash-lite' },
+					{ name: 'Gemini 2.5 Flash', value: 'gemini-2.5-flash' },
+					{ name: 'Gemini 2.5 Flash-Lite', value: 'gemini-2.5-flash-lite' },
+					{ name: 'Gemini 2.5 Pro', value: 'gemini-2.5-pro' },
+				],
+				default: 'gemini-2.0-flash',
+				displayOptions: {
+					show: {
+						operation: ['queryDocuments'],
+					},
+				},
+				description: 'File Search에 사용할 Gemini 모델',
+			},
+			{
 				displayName: 'Metadata Filter',
 				name: 'metadataFilter',
 				type: 'string',
@@ -273,35 +292,7 @@ export class GoogleFileSearchStore implements INodeType {
 						operation: ['queryDocuments'],
 					},
 				},
-				description: 'AIP-160 형식의 메타데이터 필터 (예: author="홍길동")',
-			},
-			{
-				displayName: 'Include Citations',
-				name: 'includeCitations',
-				type: 'boolean',
-				default: true,
-				displayOptions: {
-					show: {
-						operation: ['queryDocuments'],
-					},
-				},
-				description: '응답에 인용 출처 포함 여부',
-			},
-			{
-				displayName: 'Max Results',
-				name: 'maxResults',
-				type: 'number',
-				typeOptions: {
-					minValue: 1,
-					maxValue: 20,
-				},
-				default: 10,
-				displayOptions: {
-					show: {
-						operation: ['queryDocuments'],
-					},
-				},
-				description: '반환할 최대 결과 수',
+				description: '메타데이터 필터 (예: author = "홍길동")',
 			},
 			// Get Operation Status 파라미터
 			{
@@ -315,7 +306,7 @@ export class GoogleFileSearchStore implements INodeType {
 						operation: ['getOperationStatus'],
 					},
 				},
-				description: '확인할 작업의 이름 (예: operations/abc123)',
+				description: 'Upload 응답에서 받은 작업 이름 (예: fileSearchStores/abc/operations/xyz 또는 fileSearchStores/abc/upload/operations/xyz)',
 			},
 		],
 	};
@@ -329,26 +320,53 @@ export class GoogleFileSearchStore implements INodeType {
 		const baseUrl = 'https://generativelanguage.googleapis.com';
 
 		const handleApiError = (error: unknown): Error => {
-			const err = error as { response?: { status?: number; data?: { error?: { message?: string } } }; message?: string };
+			const err = error as {
+				response?: { status?: number; data?: { error?: { message?: string } } };
+				message?: string;
+				httpCode?: number;
+				cause?: { code?: string; message?: string; response?: { body?: string | { error?: { message?: string } } } };
+				description?: string;
+			};
 
-			if (err.response) {
-				const statusCode = err.response.status;
-				const apiMessage = err.response.data?.error?.message || 'Unknown API error';
+			// n8n httpRequest 헬퍼의 오류 형식 처리
+			let statusCode: number | undefined;
+			let apiMessage = 'Unknown API error';
 
-				if (statusCode === 400) {
-					return new NodeOperationError(this.getNode(), `Bad request: ${apiMessage}`);
-				} else if (statusCode === 403) {
-					return new NodeOperationError(this.getNode(), 'API Key가 유효하지 않거나 권한이 없습니다');
-				} else if (statusCode === 404) {
-					return new NodeOperationError(this.getNode(), '리소스를 찾을 수 없습니다');
-				} else if (statusCode === 429) {
-					return new NodeOperationError(this.getNode(), 'API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요');
+			// 다양한 오류 형식에서 메시지 추출
+			if (err.cause?.response?.body) {
+				const body = err.cause.response.body;
+				if (typeof body === 'string') {
+					try {
+						const parsed = JSON.parse(body);
+						apiMessage = parsed.error?.message || apiMessage;
+					} catch {
+						apiMessage = body;
+					}
+				} else if (body.error?.message) {
+					apiMessage = body.error.message;
 				}
-
-				return new NodeOperationError(this.getNode(), apiMessage);
+			} else if (err.description) {
+				apiMessage = err.description;
+			} else if (err.response?.data?.error?.message) {
+				apiMessage = err.response.data.error.message;
+			} else if (err.message) {
+				apiMessage = err.message;
 			}
 
-			return new NodeOperationError(this.getNode(), err.message || 'Unknown error occurred');
+			// 상태 코드 추출
+			statusCode = err.httpCode || err.response?.status;
+
+			if (statusCode === 400) {
+				return new NodeOperationError(this.getNode(), `Bad request: ${apiMessage}`);
+			} else if (statusCode === 403) {
+				return new NodeOperationError(this.getNode(), `API Key가 유효하지 않거나 권한이 없습니다: ${apiMessage}`);
+			} else if (statusCode === 404) {
+				return new NodeOperationError(this.getNode(), `리소스를 찾을 수 없습니다: ${apiMessage}`);
+			} else if (statusCode === 429) {
+				return new NodeOperationError(this.getNode(), `API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요: ${apiMessage}`);
+			}
+
+			return new NodeOperationError(this.getNode(), apiMessage);
 		};
 
 		for (let i = 0; i < items.length; i++) {
@@ -488,17 +506,17 @@ export class GoogleFileSearchStore implements INodeType {
 
 					const boundary = '---n8n-boundary-' + Date.now().toString(16);
 
-					const documentConfig: IDataObject = {
-						display_name: fileName,
+					const uploadConfig: IDataObject = {
+						displayName: fileName,
 					};
 					if (Object.keys(metadata).length > 0) {
-						documentConfig.custom_metadata = metadata;
+						uploadConfig.customMetadata = metadata;
 					}
 					if (Object.keys(chunkingConfig).length > 0) {
-						documentConfig.chunking_config = chunkingConfig;
+						uploadConfig.chunkingConfig = chunkingConfig;
 					}
 
-					const metadataPart = JSON.stringify({ document: documentConfig });
+					const metadataPart = JSON.stringify(uploadConfig);
 
 					const bodyParts: Buffer[] = [
 						Buffer.from(`--${boundary}\r\n`),
@@ -515,9 +533,10 @@ export class GoogleFileSearchStore implements INodeType {
 					try {
 						const response = await this.helpers.httpRequest({
 							method: 'POST',
-							url: `${baseUrl}/upload/v1beta/${normalizedStoreName}/documents`,
+							url: `${baseUrl}/upload/v1beta/${normalizedStoreName}:uploadToFileSearchStore`,
 							qs: { key: apiKey },
 							headers: {
+								'X-Goog-Upload-Protocol': 'multipart',
 								'Content-Type': `multipart/related; boundary=${boundary}`,
 								'Content-Length': body.length.toString(),
 							},
@@ -530,31 +549,42 @@ export class GoogleFileSearchStore implements INodeType {
 						throw handleApiError(error);
 					}
 				} else if (operation === 'queryDocuments') {
-					// Query Documents operation
+					// Query Documents operation - generateContent API with file_search tool
 					const storeName = this.getNodeParameter('storeName', i) as string;
 					const query = this.getNodeParameter('query', i) as string;
+					const model = this.getNodeParameter('model', i) as string;
 					const metadataFilter = this.getNodeParameter('metadataFilter', i) as string;
-					const includeCitations = this.getNodeParameter('includeCitations', i) as boolean;
-					const maxResults = this.getNodeParameter('maxResults', i) as number;
 
 					const normalizedStoreName = storeName.startsWith('fileSearchStores/')
 						? storeName
 						: `fileSearchStores/${storeName}`;
 
-					const requestBody: IDataObject = {
-						query,
-						maxResults,
-						includeCitations,
+					// Build file_search tool configuration
+					const fileSearchConfig: IDataObject = {
+						file_search_store_names: [normalizedStoreName],
 					};
 
 					if (metadataFilter) {
-						requestBody.metadataFilter = metadataFilter;
+						fileSearchConfig.metadata_filter = metadataFilter;
 					}
 
+					const requestBody: IDataObject = {
+						contents: [
+							{
+								parts: [{ text: query }],
+							},
+						],
+						tools: [
+							{
+								file_search: fileSearchConfig,
+							},
+						],
+					};
+
 					try {
-						responseData = await this.helpers.httpRequest({
+						const rawResponse = await this.helpers.httpRequest({
 							method: 'POST',
-							url: `${baseUrl}/v1beta/${normalizedStoreName}:query`,
+							url: `${baseUrl}/v1beta/models/${model}:generateContent`,
 							qs: { key: apiKey },
 							headers: {
 								'Content-Type': 'application/json',
@@ -562,20 +592,74 @@ export class GoogleFileSearchStore implements INodeType {
 							body: requestBody,
 							json: true,
 						}) as IDataObject;
+
+						// Parse response to extract answer and sources
+						const candidates = rawResponse.candidates as Array<{
+							content?: { parts?: Array<{ text?: string }> };
+							groundingMetadata?: {
+								groundingChunks?: Array<{
+									retrievedContext?: {
+										title?: string;
+										text?: string;
+										fileSearchStore?: string;
+									};
+								}>;
+								groundingSupports?: Array<{
+									segment?: { startIndex?: number; endIndex?: number; text?: string };
+									groundingChunkIndices?: number[];
+									confidenceScores?: number[];
+								}>;
+								retrievalMetadata?: IDataObject;
+							};
+						}>;
+
+						// Extract answer text
+						let answer = '';
+						if (candidates?.[0]?.content?.parts) {
+							answer = candidates[0].content.parts
+								.map((part) => part.text || '')
+								.join('');
+						}
+
+						// Extract sources from groundingMetadata
+						const sources: Array<{
+							document: string;
+							store: string;
+							chunk: string;
+						}> = [];
+
+						const groundingMetadata = candidates?.[0]?.groundingMetadata;
+						if (groundingMetadata?.groundingChunks) {
+							for (const chunk of groundingMetadata.groundingChunks) {
+								if (chunk.retrievedContext) {
+									sources.push({
+										document: chunk.retrievedContext.title || 'Unknown',
+										store: chunk.retrievedContext.fileSearchStore || '',
+										chunk: chunk.retrievedContext.text || '',
+									});
+								}
+							}
+						}
+
+						responseData = {
+							answer,
+							sources,
+							groundingMetadata: groundingMetadata || null,
+							rawResponse,
+						};
 					} catch (error) {
 						throw handleApiError(error);
 					}
 				} else if (operation === 'getOperationStatus') {
 					// Get Operation Status
+					// Operation name은 Upload 응답에서 받은 전체 경로를 사용
+					// 예: fileSearchStores/abc/operations/xyz 또는 fileSearchStores/abc/upload/operations/xyz
 					const operationName = this.getNodeParameter('operationName', i) as string;
-					const normalizedOperationName = operationName.startsWith('operations/')
-						? operationName
-						: `operations/${operationName}`;
 
 					try {
 						responseData = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${baseUrl}/v1beta/${normalizedOperationName}`,
+							url: `${baseUrl}/v1beta/${operationName}`,
 							qs: { key: apiKey },
 							json: true,
 						}) as IDataObject;

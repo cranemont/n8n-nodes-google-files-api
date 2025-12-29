@@ -185,26 +185,53 @@ export class GoogleFileApi implements INodeType {
 		};
 
 		const handleApiError = (error: unknown): Error => {
-			const err = error as { response?: { status?: number; data?: { error?: { message?: string } } }; message?: string };
+			const err = error as {
+				response?: { status?: number; data?: { error?: { message?: string } } };
+				message?: string;
+				httpCode?: number;
+				cause?: { code?: string; message?: string; response?: { body?: string | { error?: { message?: string } } } };
+				description?: string;
+			};
 
-			if (err.response) {
-				const statusCode = err.response.status;
-				const apiMessage = err.response.data?.error?.message || 'Unknown API error';
+			// n8n httpRequest 헬퍼의 오류 형식 처리
+			let statusCode: number | undefined;
+			let apiMessage = 'Unknown API error';
 
-				if (statusCode === 400) {
-					return new NodeOperationError(this.getNode(), `Bad request: ${apiMessage}`);
-				} else if (statusCode === 403) {
-					return new NodeOperationError(this.getNode(), 'API Key가 유효하지 않거나 권한이 없습니다');
-				} else if (statusCode === 404) {
-					return new NodeOperationError(this.getNode(), '파일을 찾을 수 없습니다');
-				} else if (statusCode === 429) {
-					return new NodeOperationError(this.getNode(), 'API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요');
+			// 다양한 오류 형식에서 메시지 추출
+			if (err.cause?.response?.body) {
+				const body = err.cause.response.body;
+				if (typeof body === 'string') {
+					try {
+						const parsed = JSON.parse(body);
+						apiMessage = parsed.error?.message || apiMessage;
+					} catch {
+						apiMessage = body;
+					}
+				} else if (body.error?.message) {
+					apiMessage = body.error.message;
 				}
-
-				return new NodeOperationError(this.getNode(), apiMessage);
+			} else if (err.description) {
+				apiMessage = err.description;
+			} else if (err.response?.data?.error?.message) {
+				apiMessage = err.response.data.error.message;
+			} else if (err.message) {
+				apiMessage = err.message;
 			}
 
-			return new NodeOperationError(this.getNode(), err.message || 'Unknown error occurred');
+			// 상태 코드 추출
+			statusCode = err.httpCode || err.response?.status;
+
+			if (statusCode === 400) {
+				return new NodeOperationError(this.getNode(), `Bad request: ${apiMessage}`);
+			} else if (statusCode === 403) {
+				return new NodeOperationError(this.getNode(), `API Key가 유효하지 않거나 권한이 없습니다: ${apiMessage}`);
+			} else if (statusCode === 404) {
+				return new NodeOperationError(this.getNode(), `파일을 찾을 수 없습니다: ${apiMessage}`);
+			} else if (statusCode === 429) {
+				return new NodeOperationError(this.getNode(), `API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요: ${apiMessage}`);
+			}
+
+			return new NodeOperationError(this.getNode(), apiMessage);
 		};
 
 		for (let i = 0; i < items.length; i++) {
@@ -291,6 +318,7 @@ export class GoogleFileApi implements INodeType {
 								method: 'POST',
 								url: `${baseUrl}/upload/v1beta/files?key=${apiKey}`,
 								headers: {
+									'X-Goog-Upload-Protocol': 'multipart',
 									'Content-Type': `multipart/related; boundary=${boundary}`,
 									'Content-Length': body.length.toString(),
 								},
