@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- Google colors inspired search store icon -->
+  <defs>
+    <linearGradient id="googleSearchGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4285F4"/>
+      <stop offset="50%" style="stop-color:#34A853"/>
+      <stop offset="100%" style="stop-color:#FBBC05"/>
+    </linearGradient>
+  </defs>
+  <!-- Store/Database shape -->
+  <ellipse cx="24" cy="10" rx="16" ry="6" fill="#E8F0FE" stroke="url(#googleSearchGradient)" stroke-width="2"/>
+  <path d="M8 10v10c0 3.3 7.2 6 16 6s16-2.7 16-6V10" fill="none" stroke="url(#googleSearchGradient)" stroke-width="2"/>
+  <ellipse cx="24" cy="20" rx="16" ry="6" fill="none" stroke="url(#googleSearchGradient)" stroke-width="1" stroke-dasharray="2,2"/>
+  <path d="M8 20v10c0 3.3 7.2 6 16 6s16-2.7 16-6V20" fill="none" stroke="url(#googleSearchGradient)" stroke-width="2"/>
+  <!-- Search magnifying glass -->
+  <g transform="translate(30, 32)">
+    <circle cx="0" cy="0" r="7" fill="#fff" stroke="#4285F4" stroke-width="2"/>
+    <line x1="5" y1="5" x2="10" y2="10" stroke="#4285F4" stroke-width="3" stroke-linecap="round"/>
+    <!-- RAG sparkle -->
+    <path d="M-2 -2L0 -4L2 -2L0 0z" fill="#FBBC05"/>
+  </g>
+  <!-- Document lines in store -->
+  <line x1="16" y1="13" x2="32" y2="13" stroke="#34A853" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="16" y1="16" x2="28" y2="16" stroke="#EA4335" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

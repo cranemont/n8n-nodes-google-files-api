@@ -1,0 +1,13 @@
+{
+  "node": "n8n-nodes-base.googleFileSearchStore",
+  "nodeVersion": "1.0",
+  "codexVersion": "1.0",
+  "categories": ["AI", "Miscellaneous"],
+  "resources": {
+    "primaryDocumentation": [
+      {
+        "url": "https://ai.google.dev/gemini-api/docs/file-search"
+      }
+    ]
+  }
+}
