@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-google-files-api",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "n8n nodes for Google Gemini File Search Store (RAG)",
   "keywords": [
     "n8n-community-node-package",

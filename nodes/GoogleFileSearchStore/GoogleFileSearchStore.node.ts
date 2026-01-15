@@ -510,7 +510,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'POST',
 								url: `${baseUrl}/v1beta/fileSearchStores`,
@@ -530,7 +530,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'GET',
 								url: `${baseUrl}/v1beta/fileSearchStores`,
@@ -544,7 +544,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'GET',
 								url: `${baseUrl}/v1beta/${storeName}`,
@@ -557,7 +557,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'DELETE',
 								url: `${baseUrl}/v1beta/${storeName}`,
@@ -612,7 +612,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'POST',
 								url: `${baseUrl}/upload/v1beta/${storeName}:uploadToFileSearchStore`,
@@ -652,7 +652,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'POST',
 								url: `${baseUrl}/v1beta/${storeName}:importFile`,
@@ -673,7 +673,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'GET',
 								url: `${baseUrl}/v1beta/${storeName}/documents`,
@@ -687,7 +687,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'GET',
 								url: `${baseUrl}/v1beta/${documentName}`,
@@ -706,7 +706,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'DELETE',
 								url: `${baseUrl}/v1beta/${documentName}`,
@@ -733,7 +733,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'POST',
 								url: `${baseUrl}/v1beta/models/${model}:generateContent`,
@@ -786,7 +786,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
-							'googleGeminiApi',
+							'googlePalmApi',
 							{
 								method: 'GET',
 								url: `${baseUrl}/v1beta/${operationName}`,
