@@ -22,7 +22,7 @@ export class GoogleFileSearchStore implements INodeType {
 		outputs: ['main'],
 		credentials: [
 			{
-				name: 'googleGeminiApi',
+				name: 'googlePalmApi',
 				required: true,
 			},
 		],
