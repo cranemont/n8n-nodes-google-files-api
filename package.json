@@ -1,12 +1,11 @@
 {
   "name": "n8n-nodes-google-files-api",
   "version": "1.0.0",
-  "description": "n8n nodes for Google Gemini File API and File Search Store",
+  "description": "n8n nodes for Google Gemini File Search Store (RAG)",
   "keywords": [
     "n8n-community-node-package",
     "google",
     "gemini",
-    "files-api",
     "rag",
     "file-search"
   ],
@@ -41,7 +40,6 @@
       "dist/credentials/GoogleGeminiApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/GoogleFileApi/GoogleFileApi.node.js",
       "dist/nodes/GoogleFileSearchStore/GoogleFileSearchStore.node.js"
     ]
   },
