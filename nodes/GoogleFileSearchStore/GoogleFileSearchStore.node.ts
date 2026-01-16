@@ -737,7 +737,7 @@ export class GoogleFileSearchStore implements INodeType {
 
 						const fileSearchTool: any = {
 							fileSearch: {
-								fileSearchStores: [storeName],
+								fileSearchStoreNames: [storeName],
 							},
 						};
 
