@@ -602,7 +602,7 @@ export class GoogleFileSearchStore implements INodeType {
 						}
 
 						const boundary = '---n8n-boundary-' + Date.now();
-						const metadata = JSON.stringify({ document: documentConfig });
+						const metadata = JSON.stringify(documentConfig);
 
 						const body = Buffer.concat([
 							Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`),
@@ -804,11 +804,10 @@ export class GoogleFileSearchStore implements INodeType {
 					cause: error.cause,
 					description: error.description,
 				};
-				if (this.continueOnFail()) {
-					returnData.push({ json: { error: error.message, errorDetails }, pairedItem: { item: i } });
-					continue;
-				}
-				throw new NodeOperationError(this.getNode(), JSON.stringify(errorDetails), { itemIndex: i });
+				throw new NodeOperationError(this.getNode(), error.message, {
+					itemIndex: i,
+					description: JSON.stringify(errorDetails),
+				});
 			}
 		}
 
