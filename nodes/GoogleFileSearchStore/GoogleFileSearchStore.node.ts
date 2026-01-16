@@ -635,7 +635,8 @@ export class GoogleFileSearchStore implements INodeType {
 							},
 						);
 
-						returnData.push({ json: JSON.parse(response as string) });
+						const parsedResponse = typeof response === 'string' ? JSON.parse(response) : response;
+						returnData.push({ json: parsedResponse });
 					} else if (operation === 'importFile') {
 						const storeName = this.getNodeParameter('storeName', i) as string;
 						const fileName = this.getNodeParameter('fileName', i) as string;
