@@ -811,16 +811,29 @@ export class GoogleFileSearchStore implements INodeType {
 					}
 				}
 			} catch (error: any) {
+				// Extract error message properly (handle object messages)
+				let errorMessage = error.message;
+				if (typeof errorMessage === 'object') {
+					errorMessage = JSON.stringify(errorMessage);
+				}
+
+				// Extract response body
+				let responseBody = error.response?.body;
+				if (typeof responseBody === 'object') {
+					responseBody = JSON.stringify(responseBody);
+				}
+
 				const errorDetails = {
-					message: error.message,
+					message: errorMessage,
 					statusCode: error.statusCode,
-					body: error.response?.body,
-					cause: error.cause,
+					body: responseBody,
+					cause: error.cause?.message || error.cause,
 					description: error.description,
 				};
-				throw new NodeOperationError(this.getNode(), error.message, {
+
+				throw new NodeOperationError(this.getNode(), errorMessage || 'Unknown error', {
 					itemIndex: i,
-					description: JSON.stringify(errorDetails),
+					description: JSON.stringify(errorDetails, null, 2),
 				});
 			}
 		}
