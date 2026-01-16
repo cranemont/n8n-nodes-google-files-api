@@ -797,11 +797,18 @@ export class GoogleFileSearchStore implements INodeType {
 					}
 				}
 			} catch (error: any) {
+				const errorDetails = {
+					message: error.message,
+					statusCode: error.statusCode,
+					body: error.response?.body,
+					cause: error.cause,
+					description: error.description,
+				};
 				if (this.continueOnFail()) {
-					returnData.push({ json: { error: error.message }, pairedItem: { item: i } });
+					returnData.push({ json: { error: error.message, errorDetails }, pairedItem: { item: i } });
 					continue;
 				}
-				throw new NodeOperationError(this.getNode(), error.message, { itemIndex: i });
+				throw new NodeOperationError(this.getNode(), JSON.stringify(errorDetails), { itemIndex: i });
 			}
 		}
 
