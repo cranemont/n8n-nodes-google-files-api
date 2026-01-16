@@ -352,19 +352,15 @@ export class GoogleFileSearchStore implements INodeType {
 				},
 				options: [
 					{
-						name: 'Gemini 2.5 Flash',
-						value: 'gemini-2.5-flash-preview-05-20',
-					},
-					{
 						name: 'Gemini 2.5 Pro',
-						value: 'gemini-2.5-pro-preview-05-06',
+						value: 'gemini-2.5-pro',
 					},
 					{
-						name: 'Gemini 2.0 Flash',
-						value: 'gemini-2.0-flash',
+						name: 'Gemini 3 Flash',
+						value: 'gemini-3-flash-preview',
 					},
 				],
-				default: 'gemini-2.5-flash-preview-05-20',
+				default: 'gemini-2.5-pro',
 				description: '사용할 Gemini 모델',
 			},
 			{
