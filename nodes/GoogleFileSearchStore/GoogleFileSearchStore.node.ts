@@ -603,11 +603,19 @@ export class GoogleFileSearchStore implements INodeType {
 							}));
 						}
 
-						const boundary = '---n8n-boundary-' + Date.now();
+						const boundary = 'n8n_boundary_' + Date.now();
 						const metadata = JSON.stringify(documentConfig);
 
 						const body = Buffer.concat([
-							Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`),
+							Buffer.from(
+								`--${boundary}\r\n` +
+								`Content-Disposition: form-data; name="metadata"\r\n` +
+								`Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+								`${metadata}\r\n` +
+								`--${boundary}\r\n` +
+								`Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+								`Content-Type: ${mimeType}\r\n\r\n`
+							),
 							buffer,
 							Buffer.from(`\r\n--${boundary}--`),
 						]);
@@ -620,6 +628,7 @@ export class GoogleFileSearchStore implements INodeType {
 								url: `${baseUrl}/upload/v1beta/${storeName}:uploadToFileSearchStore`,
 								headers: {
 									'Content-Type': `multipart/related; boundary=${boundary}`,
+									'X-Goog-Upload-Protocol': 'multipart',
 								},
 								body,
 								json: false,
