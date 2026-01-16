@@ -585,12 +585,14 @@ export class GoogleFileSearchStore implements INodeType {
 						};
 
 						if (chunkingOptions.maxTokensPerChunk || chunkingOptions.maxOverlapTokens) {
-							documentConfig.chunkingConfig = {};
+							documentConfig.chunkingConfig = {
+								whiteSpaceConfig: {},
+							};
 							if (chunkingOptions.maxTokensPerChunk) {
-								documentConfig.chunkingConfig.maxTokensPerChunk = chunkingOptions.maxTokensPerChunk;
+								documentConfig.chunkingConfig.whiteSpaceConfig.maxTokensPerChunk = chunkingOptions.maxTokensPerChunk;
 							}
 							if (chunkingOptions.maxOverlapTokens) {
-								documentConfig.chunkingConfig.maxOverlapTokens = chunkingOptions.maxOverlapTokens;
+								documentConfig.chunkingConfig.whiteSpaceConfig.maxOverlapTokens = chunkingOptions.maxOverlapTokens;
 							}
 						}
 
@@ -634,12 +636,14 @@ export class GoogleFileSearchStore implements INodeType {
 						const body: any = { source: { fileSource: { name: fileName } } };
 
 						if (chunkingOptions.maxTokensPerChunk || chunkingOptions.maxOverlapTokens) {
-							body.chunkingConfig = {};
+							body.chunkingConfig = {
+								whiteSpaceConfig: {},
+							};
 							if (chunkingOptions.maxTokensPerChunk) {
-								body.chunkingConfig.maxTokensPerChunk = chunkingOptions.maxTokensPerChunk;
+								body.chunkingConfig.whiteSpaceConfig.maxTokensPerChunk = chunkingOptions.maxTokensPerChunk;
 							}
 							if (chunkingOptions.maxOverlapTokens) {
-								body.chunkingConfig.maxOverlapTokens = chunkingOptions.maxOverlapTokens;
+								body.chunkingConfig.whiteSpaceConfig.maxOverlapTokens = chunkingOptions.maxOverlapTokens;
 							}
 						}
 
